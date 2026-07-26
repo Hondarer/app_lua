@@ -31,7 +31,7 @@ endif
 # 変更できない。本リポジトリは警告抑制フラグ (-Wno-*) を原則使わない方針だが
 # (see: framework/makefw/docs/gcc-warning-guide/README.md)、cJSON/sqlite と
 # 同様に今回はソース非改変を優先し、Lua 本体に起因する以下の警告に限り
-# app/lua 配下のコンパイル オプションで例外的に抑制する (ユーザー承認済み)。
+# app/lua 配下のコンパイル オプションで例外的に抑制する。
 #
 # - -Wpadded: 構造体パディング (lua.h の公開 API 構造体。ヘッダー経由で
 #   本リポジトリ側のコードにも波及するため、app/lua 全体で抑制する)
@@ -45,8 +45,18 @@ endif
 # app/makepart.mk (親階層) で CFLAGS/CXXFLAGS に GCC_WARN_BASE が設定された後、
 # makepart.mk は親から子の順に評価されるため、ここで追記する -Wno-* は
 # 常に元の -W* より後方に置かれ、GCC 上で有効に上書きできる。
-# MSVC は -W 系オプションを解釈できないため Linux 限定で追記する。
 ifdef PLATFORM_LINUX
     CFLAGS   += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral
     CXXFLAGS += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral
+endif
+
+# C4310: キャストによる定数値の切り捨て (lcode.c/lparser.c 等の VM 実装)
+# C4324: アラインメント指定子による構造体パディング (lua_longjmp 等)
+# C4701: 初期化されていない可能性のあるローカル変数の使用 (誤検知。lobject.c/lvm.c
+#   の数値変換マクロ由来)
+# C4702: 制御が渡らないコード (lapi.c/lparser.c/ltm.c/lvm.c の分岐構造)
+# C4709: 添字式表現内のコンマ演算子 (lstring.c/ltable.c/lvm.c のハッシュ/VM 実装)
+ifdef PLATFORM_WINDOWS
+    CFLAGS   += /wd4310 /wd4324 /wd4701 /wd4702 /wd4709
+    CXXFLAGS += /wd4310 /wd4324 /wd4701 /wd4702 /wd4709
 endif
