@@ -7,9 +7,9 @@
 LIBSDIR += \
 	$(MYAPP_DIR)/prod/lib
 
-LIBS += lua m
+LIBS += lua
 
 ifdef PLATFORM_LINUX
-    # loadlib.c の動的ライブラリ読み込み (require) 実装で dlopen 系シンボルを利用する
-    LIBS += dl
+    # Lua の数学関数に libm、loadlib.c の動的ライブラリ読み込み実装に libdl が必要
+    LIBS += m dl
 endif
