@@ -1,0 +1,61 @@
+# 全部のファイルを管理対象外
+*
+
+# 管理対象
+
+## ディレクトリ配下のディレクトリ
+!*/
+
+## ディレクトリ配下の拡張子付きファイル
+!*.*
+
+## ライセンスファイル
+!LICENSE
+
+## makefile
+!Makefile
+!makefile
+
+# 以下は管理対象外
+
+## Claude Code
+/.claude
+## Codex
+/.codex
+## GitHub Copilot
+/.copilot-artifacts
+
+## デバッグのために LLM に参照させるファイル群の一時置き場
+/prompt
+
+## 中間ファイル
+obj
+gcov
+lcov
+coverage
+results
+core
+coverage.xml
+
+## ビルド/Doxy スキップ用スタンプ
+make_build.stamp
+make_test.stamp
+make_doxy.stamp
+
+## 中間ファイル (Coverity)
+idir
+
+## Python cache
+__pycache__/
+
+## 成果物
+lib
+bin
+cbin
+!/bin
+*.exe
+*.pdb
+*.warn
+
+## トレース
+log/

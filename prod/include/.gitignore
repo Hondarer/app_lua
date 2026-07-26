@@ -1,0 +1,6 @@
+# app/lua/packages 配下の tar.gz から展開される生成物。手動改変しないため Git 管理対象外とする。
+/lua.h
+/luaconf.h
+/lualib.h
+/lauxlib.h
+/lua.hpp
