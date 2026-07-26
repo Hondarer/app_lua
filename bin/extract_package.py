@@ -90,7 +90,7 @@ def ensure_gitignore(app_dir):
         gitignore_path = os.path.join(dir_path, ".gitignore")
         content = GITIGNORE_HEADER + "".join(f"/{name}\n" for name in names)
         tmp_path = gitignore_path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
+        with open(tmp_path, "w", encoding="utf-8", newline="") as f:
             f.write(content)
         os.replace(tmp_path, gitignore_path)
 
