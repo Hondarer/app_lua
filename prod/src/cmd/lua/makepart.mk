@@ -4,9 +4,6 @@
 # 手動改変しない (再展開で上書きされる)。行編集オプション (LUA_USE_READLINE) は
 # 定義せず、readline への外部依存を避けた最小構成でビルドする。
 
-LIBSDIR += \
-	$(MYAPP_DIR)/prod/lib
-
 LIBS += lua
 
 ifdef PLATFORM_LINUX
