@@ -61,8 +61,8 @@ Lua 本体は MIT License です。単体の `LICENSE` ファイルはアーカ�
 
 ## Lua API モック
 
-Lua を利用するアプリの単体テストでは、`<mock_lua.h>` と `libmock_lua` を使用できます。
-`Mock_lua` を生成しない場合と、生成後に `EXPECT_CALL` や `ON_CALL` を設定しない場合は、動的ライブラリの実関数を呼び出します。
+Lua を利用するアプリの単体テストでは、`<mock_lua.h>` と `libmock_lua` を使用できます。  
+`Mock_lua` を生成しない場合と、生成後に `EXPECT_CALL` や `ON_CALL` を設定しない場合は、動的ライブラリの実関数を呼び出します。  
 テストごとに変更したい関数だけへ振る舞いを設定できます。
 
 ```cpp
@@ -70,8 +70,8 @@ NiceMock<Mock_lua> mock_lua;
 EXPECT_CALL(mock_lua, luaL_newstate()).WillOnce(Return(nullptr));
 ```
 
-`lua_pushfstring`、`lua_gc`、`luaL_error` は、可変長引数を `va_list` としてモックへ渡します。
-引数の内容を照合しない場合は、該当する `va_list` 引数に `_` を指定してください。
+`lua_pushfstring`、`lua_gc`、`luaL_error` は、可変長引数を `va_list` としてモックへ渡します。  
+引数の内容を照合しない場合は、該当する `va_list` 引数に `_` を指定してください。  
 `luaL_newlib` など、Lua ヘッダーでマクロとして提供される API は、展開後に呼び出される関数をモックしてください。
 
 Linux では実行時に `app/lua/prod/lib`、Windows では `app/lua/prod/bin` から実ライブラリを探索できるように設定してください。

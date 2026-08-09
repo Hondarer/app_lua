@@ -1,4 +1,4 @@
-/* API 表として複数回インクルードするため、インクルードガードを定義しない。 */
+/* API 表として複数回インクルードするため、インクルード ガードを定義しない。 */
 MOCK_LUA_VOID(void, luaL_addgsub, (luaL_Buffer * b, const char *s, const char *p, const char *r), (b, s, p, r),
               (_, _, _, _))
 MOCK_LUA_VOID(void, luaL_addlstring, (luaL_Buffer * B, const char *s, size_t l), (B, s, l), (_, _, _))

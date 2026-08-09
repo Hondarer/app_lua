@@ -61,7 +61,7 @@ INTERNAL_HEADERS = [
     "lzio.h",
 ]
 
-# 公式インタープリタ実行ファイル (lua.c と対称に luac.c は取り込まない)
+# 公式インタープリター実行ファイル (lua.c と対称に luac.c は取り込まない)
 MAIN_SRC = "lua.c"
 
 # lprefix.h (機能検査マクロ定義) と llimits.h (内部の型/制限マクロ定義) は、
