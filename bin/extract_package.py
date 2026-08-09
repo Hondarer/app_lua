@@ -9,8 +9,10 @@ prod/libsrc/lua, prod/src/cmd/lua へ展開する。外部ツール (tar 等) �
 import argparse
 import os
 import re
+import stat
 import sys
 import tarfile
+import tempfile
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
@@ -80,6 +82,7 @@ for _header in SHARED_INTERNAL_HEADERS:
 EXTRACT_TARGETS[MAIN_SRC] = [("prod", "src", "cmd", "lua", MAIN_SRC)]
 
 # 再展開要否の判定に使う代表ファイル
+MARKER_SOURCE = "lapi.c"
 MARKER_TARGET = ("prod", "libsrc", "lua", "lapi.c")
 
 # 生成物を除外するための .gitignore を配置するディレクトリと、その内容。
@@ -98,16 +101,63 @@ GITIGNORE_TARGETS = {
 GITIGNORE_HEADER = "# app/lua/packages 配下の tar.gz から展開される生成物。手動改変しないため Git 管理対象外とする。\n"
 
 
+def atomic_replace(path, data):
+    """同じディレクトリの一意な一時ファイルを使ってファイルを置換する。"""
+    dir_path = os.path.dirname(path)
+    prefix = f".{os.path.basename(path)}."
+    try:
+        file_mode = stat.S_IMODE(os.stat(path).st_mode)
+    except FileNotFoundError:
+        current_umask = os.umask(0)
+        os.umask(current_umask)
+        file_mode = 0o666 & ~current_umask
+    tmp_path = None
+    try:
+        if isinstance(data, str):
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                newline="",
+                dir=dir_path,
+                prefix=prefix,
+                suffix=".tmp",
+                delete=False,
+            ) as f:
+                tmp_path = f.name
+                f.write(data)
+        else:
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=dir_path,
+                prefix=prefix,
+                suffix=".tmp",
+                delete=False,
+            ) as f:
+                tmp_path = f.name
+                f.write(data)
+        os.chmod(tmp_path, file_mode)
+        os.replace(tmp_path, path)
+    finally:
+        if tmp_path is not None:
+            try:
+                os.unlink(tmp_path)
+            except FileNotFoundError:
+                pass
+
+
+def iter_target_paths(app_dir):
+    for rel_parts_list in EXTRACT_TARGETS.values():
+        for rel_parts in rel_parts_list:
+            yield os.path.join(app_dir, *rel_parts)
+
+
 def ensure_gitignore(app_dir):
     for rel_parts, names in GITIGNORE_TARGETS.items():
         dir_path = os.path.join(app_dir, *rel_parts)
         os.makedirs(dir_path, exist_ok=True)
         gitignore_path = os.path.join(dir_path, ".gitignore")
         content = GITIGNORE_HEADER + "".join(f"/{name}\n" for name in names)
-        tmp_path = gitignore_path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8", newline="") as f:
-            f.write(content)
-        os.replace(tmp_path, gitignore_path)
+        atomic_replace(gitignore_path, content)
 
 
 def find_candidates(packages_dir):
@@ -183,9 +233,10 @@ def find_member(names, filename):
 
 
 def needs_extraction(tar_path, app_dir):
-    marker = os.path.join(app_dir, *MARKER_TARGET)
-    if not os.path.isfile(marker):
+    if any(not os.path.isfile(path) for path in iter_target_paths(app_dir)):
         return True
+
+    marker = os.path.join(app_dir, *MARKER_TARGET)
     if os.path.getmtime(tar_path) > os.path.getmtime(marker):
         return True
 
@@ -220,7 +271,12 @@ def extract(tar_path, app_dir):
 
     with tarfile.open(tar_path, "r:gz") as tf:
         names = tf.getnames()
-        for src_name, paths in dest_paths.items():
+        # 代表ファイルを最後に置換し、全出力の準備前に別プロセスが
+        # 展開完了と判定しないようにする。
+        ordered_sources = [name for name in dest_paths if name != MARKER_SOURCE]
+        ordered_sources.append(MARKER_SOURCE)
+        for src_name in ordered_sources:
+            paths = dest_paths[src_name]
             member = find_member(names, src_name)
             if member is None:
                 print(f"ERROR: tar 内に src/{src_name} が見つかりません: {tar_path}", file=sys.stderr)
@@ -235,10 +291,7 @@ def extract(tar_path, app_dir):
                 print(f"ERROR: {e}: {tar_path}", file=sys.stderr)
                 return False
             for dest_path in paths:
-                tmp_path = dest_path + ".tmp"
-                with open(tmp_path, "wb") as f:
-                    f.write(data)
-                os.replace(tmp_path, dest_path)
+                atomic_replace(dest_path, data)
 
     tar_mtime = os.path.getmtime(tar_path)
     for paths in dest_paths.values():
