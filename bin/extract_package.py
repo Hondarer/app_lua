@@ -7,12 +7,14 @@ prod/libsrc/lua, prod/src/cmd/lua へ展開する。外部ツール (tar 等) �
 """
 
 import argparse
+import errno
 import os
 import re
 import stat
 import sys
 import tarfile
 import tempfile
+import time
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
@@ -101,9 +103,43 @@ GITIGNORE_TARGETS = {
 GITIGNORE_HEADER = "# app/lua/packages 配下の tar.gz から展開される生成物。手動改変しないため Git 管理対象外とする。\n"
 
 
-def atomic_replace(path, data):
-    """同じディレクトリの一意な一時ファイルを使ってファイルを置換する。"""
-    dir_path = os.path.dirname(path)
+def _same_content(path, data):
+    """path の内容が data と一致すれば True。読めない場合は False。"""
+    try:
+        if isinstance(data, str):
+            with open(path, "r", encoding="utf-8", newline="") as f:
+                return f.read() == data
+        with open(path, "rb") as f:
+            return f.read() == data
+    except OSError:
+        return False
+
+
+def _is_retryable_replace_error(exc):
+    """並列プロセスによる Windows の replace 失敗を再試行対象とみなす。"""
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError):
+        winerror = getattr(exc, "winerror", None)
+        # 5: ACCESS_DENIED, 32: SHARING_VIOLATION
+        if winerror in (5, 32):
+            return True
+        if exc.errno in (errno.EACCES, errno.EPERM):
+            return True
+    return False
+
+
+def atomic_replace(path, data, retries=10, base_delay=0.05):
+    """同じディレクトリの一意な一時ファイルを使ってファイルを置換する。
+
+    内容が既に同一なら何もしない。Windows の並列 make で複数プロセスが
+    同一パスへ os.replace する際の PermissionError (WinError 5) 等には
+    再試行する。再試行中に他プロセスが正しい内容を書いた場合は成功とみなす。
+    """
+    if _same_content(path, data):
+        return
+
+    dir_path = os.path.dirname(path) or "."
     prefix = f".{os.path.basename(path)}."
     try:
         file_mode = stat.S_IMODE(os.stat(path).st_mode)
@@ -111,38 +147,54 @@ def atomic_replace(path, data):
         current_umask = os.umask(0)
         os.umask(current_umask)
         file_mode = 0o666 & ~current_umask
-    tmp_path = None
-    try:
-        if isinstance(data, str):
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                newline="",
-                dir=dir_path,
-                prefix=prefix,
-                suffix=".tmp",
-                delete=False,
-            ) as f:
-                tmp_path = f.name
-                f.write(data)
-        else:
-            with tempfile.NamedTemporaryFile(
-                mode="wb",
-                dir=dir_path,
-                prefix=prefix,
-                suffix=".tmp",
-                delete=False,
-            ) as f:
-                tmp_path = f.name
-                f.write(data)
-        os.chmod(tmp_path, file_mode)
-        os.replace(tmp_path, path)
-    finally:
-        if tmp_path is not None:
-            try:
-                os.unlink(tmp_path)
-            except FileNotFoundError:
-                pass
+
+    last_err = None
+    for attempt in range(retries):
+        if attempt > 0 and _same_content(path, data):
+            return
+
+        tmp_path = None
+        try:
+            if isinstance(data, str):
+                with tempfile.NamedTemporaryFile(
+                    mode="w",
+                    encoding="utf-8",
+                    newline="",
+                    dir=dir_path,
+                    prefix=prefix,
+                    suffix=".tmp",
+                    delete=False,
+                ) as f:
+                    tmp_path = f.name
+                    f.write(data)
+            else:
+                with tempfile.NamedTemporaryFile(
+                    mode="wb",
+                    dir=dir_path,
+                    prefix=prefix,
+                    suffix=".tmp",
+                    delete=False,
+                ) as f:
+                    tmp_path = f.name
+                    f.write(data)
+            os.chmod(tmp_path, file_mode)
+            os.replace(tmp_path, path)
+            return
+        except OSError as e:
+            if not _is_retryable_replace_error(e):
+                raise
+            last_err = e
+            time.sleep(base_delay * (2 ** min(attempt, 4)))
+        finally:
+            if tmp_path is not None:
+                try:
+                    os.unlink(tmp_path)
+                except FileNotFoundError:
+                    pass
+
+    if _same_content(path, data):
+        return
+    raise last_err
 
 
 def iter_target_paths(app_dir):
