@@ -41,13 +41,15 @@ endif
 #   一部の列挙値のみ明示的に扱う設計になっているため大量に発生する
 # - -Wformat-nonliteral: printf 系関数へ非リテラルの書式文字列を渡す実装
 #   (loslib.c/lstrlib.c の言語機能実装上の必然)
+# - -Wconversion / -Wsign-conversion: 暗黙の型変換と符号変換 (VM・標準ライブラリ
+#   全体に及び、上流を改変せずに解消できない)
 #
 # app/makepart.mk (親階層) で CFLAGS/CXXFLAGS に GCC_WARN_BASE が設定された後、
 # makepart.mk は親から子の順に評価されるため、ここで追記する -Wno-* は
 # 常に元の -W* より後方に置かれ、GCC 上で有効に上書きできる。
 ifdef PLATFORM_LINUX
-    CFLAGS   += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral
-    CXXFLAGS += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral
+    CFLAGS   += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion
+    CXXFLAGS += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion
 endif
 
 # C4310: キャストによる定数値の切り捨て (lcode.c/lparser.c 等の VM 実装)
