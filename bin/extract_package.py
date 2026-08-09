@@ -18,6 +18,21 @@ sys.stderr.reconfigure(encoding="utf-8")
 PACKAGE_NAME_PATTERN = re.compile(r"^lua-.*\.tar\.gz$", re.IGNORECASE)
 VERSION_PATTERN = re.compile(r"^lua-(\d+)\.(\d+)\.(\d+)\.tar\.gz$", re.IGNORECASE)
 
+LUA_CONFIG_PREFIX = b"""/* Use DLL import by default for Windows consumers. */
+#if defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) || defined(_WIN32)
+#if !defined(LUA_BUILD_AS_DLL)
+#define LUA_BUILD_AS_DLL
+#endif
+#endif
+
+"""
+LUA_API_EXTERN = b"#define LUA_API\t\textern"
+LUA_API_VISIBLE = b"""#if defined(__GNUC__)
+#define LUA_API __attribute__((visibility(\"default\"))) extern
+#else
+#define LUA_API extern
+#endif"""
+
 # 公開ヘッダー (組み込み利用者向け。prod/include 直下へ展開する)
 PUBLIC_HEADERS = ["lua.h", "luaconf.h", "lualib.h", "lauxlib.h", "lua.hpp"]
 
@@ -171,7 +186,26 @@ def needs_extraction(tar_path, app_dir):
     marker = os.path.join(app_dir, *MARKER_TARGET)
     if not os.path.isfile(marker):
         return True
-    return os.path.getmtime(tar_path) > os.path.getmtime(marker)
+    if os.path.getmtime(tar_path) > os.path.getmtime(marker):
+        return True
+
+    config_header = os.path.join(app_dir, "prod", "include", "luaconf.h")
+    if not os.path.isfile(config_header):
+        return True
+    with open(config_header, "rb") as f:
+        config_data = f.read()
+    return not (
+        config_data.startswith(LUA_CONFIG_PREFIX)
+        and LUA_API_VISIBLE in config_data
+    )
+
+
+def prepare_extracted_data(src_name, data):
+    if src_name != "luaconf.h":
+        return data
+    if LUA_API_EXTERN not in data:
+        raise ValueError("luaconf.h に LUA_API の既定定義が見つかりません")
+    return LUA_CONFIG_PREFIX + data.replace(LUA_API_EXTERN, LUA_API_VISIBLE, 1)
 
 
 def extract(tar_path, app_dir):
@@ -195,7 +229,11 @@ def extract(tar_path, app_dir):
             if extracted is None:
                 print(f"ERROR: tar 内のメンバーを読み取れません: {member}", file=sys.stderr)
                 return False
-            data = extracted.read()
+            try:
+                data = prepare_extracted_data(src_name, extracted.read())
+            except ValueError as e:
+                print(f"ERROR: {e}: {tar_path}", file=sys.stderr)
+                return False
             for dest_path in paths:
                 tmp_path = dest_path + ".tmp"
                 with open(tmp_path, "wb") as f:

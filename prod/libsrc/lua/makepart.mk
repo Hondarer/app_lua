@@ -8,5 +8,11 @@
 # (このディレクトリの makefile/makepart.mk 自体は手書きファイルであり、
 #  通常どおり規範・clang-format の対象とする)
 
-# LIB_TYPE は指定しない (デフォルト static -> liblua.a)。
-# shared 版は作らない。
+ifdef PLATFORM_LINUX
+    # 公開 API 以外を hidden とし、LUA_API のシンボルだけを公開する。
+    CFLAGS   += -fvisibility=hidden
+    CXXFLAGS += -fvisibility=hidden
+endif
+
+# 静的ライブラリは生成せず、Linux では .so、Windows では .dll を生成する。
+LIB_TYPE = shared

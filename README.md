@@ -9,7 +9,13 @@ c-modernization-kit のワークスペース内 (`framework/makefw` 等と組み
 `lua.c`/`luac.c` を除く) および公式インタープリター (`lua.c`) を、c-modernization-kit の makefw 規約に沿って取り込んだラッパー ライブラリです。Lua 自体のソースは改変せず、リリース アーカイブをそのまま展開して利用します。バイトコード コンパイラ (`luac.c`) は  
 取り込みません。
 
-ビルド成果物は静的ライブラリ (`liblua.a` (Linux) / `liblua.lib` (Windows)) と、`lua.c` から生成する `lua` コマンド (公式インタープリター) です (shared 版は生成しません)。  
+ビルド成果物は動的ライブラリと、`lua.c` から生成する `lua` コマンド (公式インタープリター) です。
+
+- Linux: `liblua.so`
+- Windows: `liblua.dll` およびリンク用の import library `liblua.lib`
+
+静的ライブラリ (`liblua.a` および静的リンク用の `liblua.lib`) は生成しません。
+
 `lua` コマンドは行編集オプション (`LUA_USE_READLINE`) を定義しない最小構成でビルドしており、`readline`/`editline` 等の外部ライブラリには依存しません。Linux ビルドでは、Lua 公式ビルドの `linux` ターゲットに合わせて `LUA_USE_LINUX` を定義しています。
 
 C++ から利用する場合は、`lua.h` に `extern "C"` 宣言が含まれていないため、個別ヘッダーではなく `<lua.hpp>` を include してください (`test/src/cmd/luaTest/` を参照)。
