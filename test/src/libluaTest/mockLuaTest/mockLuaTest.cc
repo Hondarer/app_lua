@@ -95,3 +95,37 @@ TEST(mockLuaTest, overrides_variadic_gc_result)
     // Assert
     EXPECT_EQ(123, actual); // [確認_正常系] - lua_gc の戻り値が 123 であること。
 }
+
+// 実 Lua 状態を作らずに後続 API をスタブして単体隔離できることの確認
+TEST(mockLuaTest, isolates_calls_without_real_state)
+{
+    // Arrange
+    NiceMock<Mock_lua> mock_lua;
+    lua_State *state = reinterpret_cast<lua_State *>(1);
+    const char *expected = "value";
+
+    // Pre-Assert
+    EXPECT_CALL(mock_lua, luaL_newstate())
+        .WillOnce(Return(state)); // [Pre-Assert確認_正常系] - luaL_newstate が 1 回呼び出されること。
+                                  // [Pre-Assert手順] - luaL_newstate から state を返却する。
+    EXPECT_CALL(mock_lua, lua_getglobal(state, StrEq("name")))
+        .WillOnce(
+            Return(LUA_TSTRING)); // [Pre-Assert確認_正常系] - lua_getglobal が name を指定して 1 回呼び出されること。
+                                  // [Pre-Assert手順] - lua_getglobal から LUA_TSTRING を返却する。
+    EXPECT_CALL(mock_lua, lua_tolstring(state, -1, nullptr))
+        .WillOnce(Return(expected)); // [Pre-Assert確認_正常系] - lua_tolstring が 1 回呼び出されること。
+                                     // [Pre-Assert手順] - lua_tolstring から expected を返却する。
+    EXPECT_CALL(mock_lua, lua_close(state))
+        .WillOnce(Return()); // [Pre-Assert確認_正常系] - lua_close が state を指定して 1 回呼び出されること。
+                             // [Pre-Assert手順] - lua_close から直ちに戻る。
+
+    // Act
+    lua_State *actual = luaL_newstate();         // [手順] - luaL_newstate を呼び出す。
+    lua_getglobal(actual, "name");               // [手順] - lua_getglobal で name を取得する。
+    const char *text = lua_tostring(actual, -1); // [手順] - lua_tostring で文字列を取得する。
+    lua_close(actual);                           // [手順] - lua_close で状態を閉じる。
+
+    // Assert
+    EXPECT_EQ(state, actual);     // [確認_正常系] - luaL_newstate の戻り値が state であること。
+    EXPECT_STREQ(expected, text); // [確認_正常系] - lua_tostring の戻り値が expected であること。
+}

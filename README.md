@@ -62,16 +62,47 @@ Lua 本体は MIT License です。単体の `LICENSE` ファイルはアーカ�
 ## Lua API モック
 
 Lua を利用するアプリの単体テストでは、`<mock_lua.h>` と `libmock_lua` を使用できます。  
+テスト対象の `makepart.mk` では、`lua` の代わりに `mock_lua` をリンクします。  
+`lua` と `mock_lua` を同時にリンクしないでください。Linux では実ライブラリの強シンボルが弱定義のモックを上書きし、`EXPECT_CALL` が効かなくなります。
+
+```makefile
+ifdef PLATFORM_WINDOWS
+    DEFINES += LUA_CORE
+endif
+
+LIBS += mock_lua
+```
+
+Windows では、`LUA_CORE` により Lua の DLL import 宣言を無効にし、`mock_lua` が提供する実シンボルを参照します。  
 `Mock_lua` を生成しない場合と、生成後に `EXPECT_CALL` や `ON_CALL` を設定しない場合は、動的ライブラリの実関数を呼び出します。  
-テストごとに変更したい関数だけへ振る舞いを設定できます。
+実関数への委譲では、Linux の `LD_LIBRARY_PATH` または Windows の `PATH` から `liblua` を読み込みます。
+
+振る舞いを変更するテストでは、`Mock_lua` を生成して `EXPECT_CALL` または `ON_CALL` を指定します。
 
 ```cpp
 NiceMock<Mock_lua> mock_lua;
 EXPECT_CALL(mock_lua, luaL_newstate()).WillOnce(Return(nullptr));
 ```
 
-`lua_pushfstring`、`lua_gc`、`luaL_error` は、可変長引数を `va_list` としてモックへ渡します。  
-引数の内容を照合しない場合は、該当する `va_list` 引数に `_` を指定してください。  
-`luaL_newlib` など、Lua ヘッダーでマクロとして提供される API は、展開後に呼び出される関数をモックしてください。
+実の `lua_State` を作らずに単体隔離する場合は、SUT が呼び出す関数をすべてスタブしてください。  
+スタブしていない呼び出しは実関数へ委譲されるため、偽ポインターを渡すと実関数が失敗します。
 
-Linux では実行時に `app/lua/prod/lib`、Windows では `app/lua/prod/bin` から実ライブラリを探索できるように設定してください。
+`lua_pushfstring`、`lua_gc`、`luaL_error` は、可変長引数を `va_list` としてモックへ渡します。  
+引数の内容を照合しない場合は、該当する `va_list` 引数に `_` を指定してください。
+
+Lua ヘッダーでマクロとして提供される API は、展開後に呼び出される関数をモックしてください。
+
+| マクロ | 展開先 |
+|---|---|
+| `lua_pop` | `lua_settop` |
+| `lua_tostring` | `lua_tolstring` |
+| `lua_tonumber` | `lua_tonumberx` |
+| `lua_pcall` | `lua_pcallk` |
+| `lua_call` | `lua_callk` |
+| `lua_newtable` | `lua_createtable` |
+| `lua_pushcfunction` | `lua_pushcclosure` |
+| `luaL_openlibs` | `luaL_openselectedlibs` |
+| `luaL_dostring` | `luaL_loadstring` と `lua_pcallk` |
+
+`lua_getextraspace` と `luaL_addchar` などの Buffer マクロは、`lua_State` や `luaL_Buffer` の領域を直接操作します。  
+偽ポインターを返す場合は、これらのマクロを使わないか、実オブジェクトを用意してください。

@@ -1,4 +1,16 @@
-/* API 表として複数回インクルードするため、インクルード ガードを定義しない。 */
+/* Lua の公開関数一覧。
+ *
+ * このヘッダーは意図的に include guard を持たない。インクルード元で
+ * MOCK_LUA_RET と MOCK_LUA_VOID を定義し、宣言、実装、テストを同じ一覧から生成する。
+ */
+
+#ifndef MOCK_LUA_RET
+    #error MOCK_LUA_RET must be defined before including mock_lua_api_table.h
+#endif
+#ifndef MOCK_LUA_VOID
+    #error MOCK_LUA_VOID must be defined before including mock_lua_api_table.h
+#endif
+
 MOCK_LUA_VOID(void, luaL_addgsub, (luaL_Buffer * b, const char *s, const char *p, const char *r), (b, s, p, r),
               (_, _, _, _))
 MOCK_LUA_VOID(void, luaL_addlstring, (luaL_Buffer * B, const char *s, size_t l), (B, s, l), (_, _, _))
