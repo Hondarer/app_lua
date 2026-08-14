@@ -6,6 +6,7 @@ class luaTest : public Test
 {
 };
 
+// dostring が式の評価結果を返すことの確認
 TEST_F(luaTest, dostring_returns_evaluated_expression)
 {
     // Arrange
@@ -26,6 +27,7 @@ TEST_F(luaTest, dostring_returns_evaluated_expression)
     lua_close(L);
 }
 
+// 不正な構文の loadstring がエラーを返すことの確認
 TEST_F(luaTest, loadstring_invalid_syntax_returns_error)
 {
     // Arrange
@@ -45,6 +47,7 @@ TEST_F(luaTest, loadstring_invalid_syntax_returns_error)
     lua_close(L);
 }
 
+// グローバル変数の設定と更新が一連で成功することの確認
 TEST_F(luaTest, global_variable_roundtrip)
 {
     // Arrange
