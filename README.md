@@ -1,5 +1,7 @@
 # lua
 
+作業前に [作業規則](AGENTS.md) を確認してください。
+
 このリポジトリ (ディレクトリ) は [c-modernization-kit](https://github.com/Hondarer/c-modernization-kit) の `app/lua` として管理される、個別アプリです。  
 c-modernization-kit のワークスペース内 (`framework/makefw` 等と組み合わせた make ビルド環境) で利用することを前提としたアプリであり、本ディレクトリ単体ではビルドできません。
 
@@ -8,6 +10,8 @@ c-modernization-kit のワークスペース内 (`framework/makefw` 等と組み
 [Lua](https://www.lua.org/) のコア VM・標準ライブラリ (`src/` 配下の `.c`/`.h`。  
 `lua.c`/`luac.c` を除く) および公式インタープリター (`lua.c`) を、c-modernization-kit の makefw 規約に沿って取り込んだラッパー ライブラリです。Lua 自体のソースは改変せず、リリース アーカイブをそのまま展開して利用します。バイトコード コンパイラ (`luac.c`) は  
 取り込みません。
+
+Lua を利用するプログラムの単体テスト向けに、Google Mock 対応の Lua API モックも含みます。
 
 ビルド成果物は動的ライブラリと、`lua.c` から生成する `lua` コマンド (公式インタープリター) です。
 
@@ -42,7 +46,7 @@ curl -L -o app/lua/packages/lua-5.5.0.tar.gz \
 
 ## バージョン更新手順
 
-1. 新しいバージョンの tar.gz を取得し、`app/lua/packages/` に追加する。
+1. 新しいバージョンの tar.gz を取得し、`app/lua/packages/` に追加します。
 2. 古いバージョンの tar.gz を削除する (`packages/` には常に 1 個のみを置く運用)。
 3. `make` を実行すると、新しい tar.gz のタイムスタンプが展開済み生成物より新しいと判定され、自動的に再展開されます。
 
