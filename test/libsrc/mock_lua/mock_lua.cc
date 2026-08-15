@@ -115,10 +115,10 @@ Mock_lua::Mock_lua()
     ON_CALL(*this, lua_pushfstring(_, _, _)).WillByDefault(Invoke(delegate_real_lua_pushfstring));
     ON_CALL(*this, lua_gc(_, _, _)).WillByDefault(Invoke(delegate_real_lua_gc));
     ON_CALL(*this, luaL_error(_, _, _)).WillByDefault(Invoke(delegate_real_luaL_error));
-    _mock_lua = this;
+    TESTFW_REGISTER_MOCK_INSTANCE(_mock_lua);
 }
 
 Mock_lua::~Mock_lua()
 {
-    _mock_lua = nullptr;
+    TESTFW_UNREGISTER_MOCK_INSTANCE(_mock_lua);
 }
