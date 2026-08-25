@@ -8,6 +8,18 @@
 # (このディレクトリの makefile/makepart.mk 自体は手書きファイルであり、
 #  通常どおり規範・clang-format の対象とする)
 
+# 外来ヘッダーの警告は SYSTEM_INCDIR で利用側から分離する。
+# upstream の一次ソース自体に残る警告だけを、このリーフで抑制する。
+ifdef PLATFORM_LINUX
+    CFLAGS   += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion
+    CXXFLAGS += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion
+endif
+
+ifdef PLATFORM_WINDOWS
+    CFLAGS   += /wd4310 /wd4324 /wd4701 /wd4702 /wd4709
+    CXXFLAGS += /wd4310 /wd4324 /wd4701 /wd4702 /wd4709
+endif
+
 ifdef PLATFORM_LINUX
     # 公開 API 以外を hidden とし、LUA_API のシンボルだけを公開する。
     CFLAGS   += -fvisibility=hidden
