@@ -4,6 +4,10 @@
 packages/ 配下の Lua ソース アーカイブ (tar.gz) を prod/include,
 prod/libsrc/lua, prod/src/cmd/lua へ展開する。外部ツール (tar 等) に
 依存せず、標準ライブラリ tarfile のみを使用する。
+
+展開後、patches/ 配下の unified diff (framework/makefw/bin/apply_patches.py)
+を順に適用する。tar の内容は加工せずそのまま書き出し、Lua 本体への
+改変はすべてパッチ側で行う。
 """
 
 import argparse
@@ -15,27 +19,13 @@ import sys
 import tarfile
 import tempfile
 import time
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
 PACKAGE_NAME_PATTERN = re.compile(r"^lua-.*\.tar\.gz$", re.IGNORECASE)
 VERSION_PATTERN = re.compile(r"^lua-(\d+)\.(\d+)\.(\d+)\.tar\.gz$", re.IGNORECASE)
-
-LUA_CONFIG_PREFIX = b"""/* Use DLL import by default for Windows consumers. */
-#if defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) || defined(_WIN32)
-#if !defined(LUA_BUILD_AS_DLL)
-#define LUA_BUILD_AS_DLL
-#endif
-#endif
-
-"""
-LUA_API_EXTERN = b"#define LUA_API\t\textern"
-LUA_API_VISIBLE = b"""#if defined(__GNUC__)
-#define LUA_API __attribute__((visibility(\"default\"))) extern
-#else
-#define LUA_API extern
-#endif"""
 
 # 公開ヘッダー (組み込み利用者向け。prod/include 直下へ展開する)
 PUBLIC_HEADERS = ["lua.h", "luaconf.h", "lualib.h", "lauxlib.h", "lua.hpp"]
@@ -83,9 +73,11 @@ for _header in SHARED_INTERNAL_HEADERS:
     EXTRACT_TARGETS[_header].append(("prod", "src", "cmd", "lua", _header))
 EXTRACT_TARGETS[MAIN_SRC] = [("prod", "src", "cmd", "lua", MAIN_SRC)]
 
-# 再展開要否の判定に使う代表ファイル
+# 展開後、パッチ適用前に代表ファイルを最後に置換する順序に使う。
 MARKER_SOURCE = "lapi.c"
-MARKER_TARGET = ("prod", "libsrc", "lua", "lapi.c")
+
+# 再展開要否の判定に使うスタンプ ファイル。
+STAMP_FILENAME = "make_extract.stamp"
 
 # 生成物を除外するための .gitignore を配置するディレクトリと、その内容。
 #
@@ -284,34 +276,60 @@ def find_member(names, filename):
     return matches[0] if matches else None
 
 
-def needs_extraction(tar_path, app_dir):
+def stamp_path(app_dir):
+    return os.path.join(app_dir, STAMP_FILENAME)
+
+
+def compute_stamp_fields(tar_path, selected_name, patches_dir, apply_patches_mod):
+    """スタンプへ書き出す項目を辞書で返す。tar.gz の stat とパッチ系列の
+    digest のみを使い、展開先ファイルの内容はハッシュしない
+    (makepart.mk から 1 ビルドで何十回も起動されるため軽量さを優先する)。
+    """
+    st = os.stat(tar_path)
+    return {
+        "package": selected_name,
+        "tar_mtime": repr(st.st_mtime),
+        "tar_size": str(st.st_size),
+        "patches_digest": apply_patches_mod.series_digest(Path(patches_dir)),
+    }
+
+
+def read_stamp(path):
+    """スタンプ ファイルを {キー: 値} で返す。読めない場合は None。"""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return None
+
+    fields = {}
+    for line in lines:
+        if not line or "=" not in line:
+            return None
+        key, _, value = line.partition("=")
+        fields[key] = value
+    return fields
+
+
+def write_stamp(path, fields):
+    content = "".join(f"{key}={value}\n" for key, value in fields.items())
+    atomic_replace(path, content)
+
+
+def needs_extraction(tar_path, app_dir, selected_name, patches_dir, apply_patches_mod):
     if any(not os.path.isfile(path) for path in iter_target_paths(app_dir)):
         return True
 
-    marker = os.path.join(app_dir, *MARKER_TARGET)
-    if os.path.getmtime(tar_path) > os.path.getmtime(marker):
+    current = read_stamp(stamp_path(app_dir))
+    if current is None:
         return True
 
-    config_header = os.path.join(app_dir, "prod", "include", "luaconf.h")
-    if not os.path.isfile(config_header):
-        return True
-    with open(config_header, "rb") as f:
-        config_data = f.read()
-    return not (
-        config_data.startswith(LUA_CONFIG_PREFIX)
-        and LUA_API_VISIBLE in config_data
-    )
-
-
-def prepare_extracted_data(src_name, data):
-    if src_name != "luaconf.h":
-        return data
-    if LUA_API_EXTERN not in data:
-        raise ValueError("luaconf.h に LUA_API の既定定義が見つかりません")
-    return LUA_CONFIG_PREFIX + data.replace(LUA_API_EXTERN, LUA_API_VISIBLE, 1)
+    expected = compute_stamp_fields(tar_path, selected_name, patches_dir, apply_patches_mod)
+    return current != expected
 
 
 def extract(tar_path, app_dir):
+    """tar の内容を加工せず、EXTRACT_TARGETS の展開先へそのまま書き出す。"""
     dest_paths = {}
     for src_name, rel_parts_list in EXTRACT_TARGETS.items():
         paths = []
@@ -337,14 +355,13 @@ def extract(tar_path, app_dir):
             if extracted is None:
                 print(f"ERROR: tar 内のメンバーを読み取れません: {member}", file=sys.stderr)
                 return False
-            try:
-                data = prepare_extracted_data(src_name, extracted.read())
-            except ValueError as e:
-                print(f"ERROR: {e}: {tar_path}", file=sys.stderr)
-                return False
+            data = extracted.read()
             for dest_path in paths:
                 atomic_replace(dest_path, data)
 
+    # パッチ適用がこの後ファイルを書き換え、mtime は適用時刻になる。
+    # これはパッチ変更時に make がソースの更新を検知するために必要な
+    # 正しい挙動であり、パッチ適用後に mtime を tar.gz の値へ戻さないこと。
     tar_mtime = os.path.getmtime(tar_path)
     for paths in dest_paths.values():
         for dest_path in paths:
@@ -355,9 +372,19 @@ def extract(tar_path, app_dir):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--app-dir", required=True)
+    parser.add_argument(
+        "--makefw-home",
+        required=True,
+        help="framework/makefw のパス。<makefw-home>/bin を sys.path へ加えて "
+        "apply_patches を import するために使う。",
+    )
     args = parser.parse_args()
 
+    sys.path.insert(0, os.path.join(args.makefw_home, "bin"))
+    import apply_patches  # noqa: E402  (sys.path 設定後に import する)
+
     packages_dir = os.path.join(args.app_dir, "packages")
+    patches_dir = os.path.join(args.app_dir, "patches")
     candidates = find_candidates(packages_dir)
 
     if not candidates:
@@ -372,12 +399,30 @@ def main():
 
     ensure_gitignore(args.app_dir)
 
-    if not needs_extraction(tar_path, args.app_dir):
+    if not needs_extraction(tar_path, args.app_dir, selected, patches_dir, apply_patches):
         return 0
 
+    stamp_file = stamp_path(args.app_dir)
+    try:
+        os.remove(stamp_file)
+    except FileNotFoundError:
+        pass
+
     print(f"INFO: Lua パッケージを展開しています: {selected}", file=sys.stderr)
-    ok = extract(tar_path, args.app_dir)
-    return 0 if ok else 2
+    if not extract(tar_path, args.app_dir):
+        return 2
+
+    try:
+        apply_patches.apply_series(Path(patches_dir), Path(args.app_dir))
+    except apply_patches.PatchError as exc:
+        print(f"ERROR: Lua パッチの適用に失敗しました: {exc}", file=sys.stderr)
+        return 3
+
+    write_stamp(
+        stamp_file,
+        compute_stamp_fields(tar_path, selected, patches_dir, apply_patches),
+    )
+    return 0
 
 
 if __name__ == "__main__":

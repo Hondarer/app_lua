@@ -10,7 +10,7 @@
 # (app/cjson/makepart.mk、app/sqlite/makepart.mk と同じ構造)
 
 ifndef MAKEFW_SYNC_EVAL
-    _LUA_EXTRACT_STATUS := $(shell python3 "$(MYAPP_DIR)/bin/extract_package.py" --app-dir "$(MYAPP_DIR)" >&2; echo $$?)
+    _LUA_EXTRACT_STATUS := $(shell python3 "$(MYAPP_DIR)/bin/extract_package.py" --app-dir "$(MYAPP_DIR)" --makefw-home "$(MAKEFW_HOME)" >&2; echo $$?)
     ifneq ($(_LUA_EXTRACT_STATUS),0)
         $(error Lua パッケージの準備に失敗しました。上記のメッセージに従って app/lua/packages にアーカイブを配置してください)
     endif
