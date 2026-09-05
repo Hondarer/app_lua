@@ -36,31 +36,26 @@ static const char *const kExpectedExportNames[] = {
     "luaL_error",
 };
 
-// liblua の公開関数と mock_lua の API 表が一致することの確認
+// liblua の期待シンボルと実ライブラリの全エクスポートが一致することの確認
 TEST(exportTest, lua_symbols_match_api_table)
 {
     // Arrange
     std::set<std::string> expected(
         std::begin(kExpectedExportNames),
         std::end(kExpectedExportNames)); // [状態] - mock_lua の API 表から期待する公開関数名を構築する。
+#if defined(PLATFORM_WINDOWS)
+    expected.insert(testing::identManifestSymbolName(
+        "liblua" TESTFW_SHARED_LIBRARY_EXTENSION)); // [状態] - IDENT manifest シンボル名を期待値へ追加する。
+#endif                                              /* PLATFORM_WINDOWS */
     std::string path = findWorkspaceRoot() + "/app/lua/prod/lib/liblua" +
                        TESTFW_SHARED_LIBRARY_EXTENSION; // [状態] - 検査対象を liblua の動的ライブラリとする。
 
     // Pre-Assert
 
     // Act
-    std::set<std::string> all_actual =
-        testing::getActualExportNames(path); // [手順] - liblua のエクスポート名を取得する。
-    std::set<std::string> actual;
-    for (const std::string &name : all_actual)
-    {
-        if (name.rfind("lua_", 0u) == 0u || name.rfind("luaL_", 0u) == 0u || name.rfind("luaopen_", 0u) == 0u)
-        {
-            actual.insert(name);
-        }
-    }
+    std::set<std::string> actual = testing::getActualExportNames(path); // [手順] - liblua のエクスポート名を取得する。
 
     // Assert
-    EXPECT_EQ(expected, actual);    // [確認_正常系] - liblua の全公開関数名が mock_lua の API 表と一致すること。
-    EXPECT_EQ(156u, actual.size()); // [確認_正常系] - liblua の公開関数数が 156 であること。
+    testing::expectExportNamesMatch(expected,
+                                    actual); // [確認_正常系] - liblua のエクスポートに不足や想定外がないこと。
 }

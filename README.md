@@ -68,7 +68,7 @@ Lua 本体は MIT License です。単体の `LICENSE` ファイルはアーカ�
 - `prod/src/cmd/lua/` : `lua.c` (生成物) から構築する公式インタープリター
 - `test/src/cmd/luaTest/` : 動作テスト
 - `test/src/libluaTest/mockLuaTest/` : Lua API モックの動作テスト
-- `test/src/libluaTest/exportTest/` : 公開関数のモック対象漏れを検出するテスト
+- `test/src/libluaTest/exportTest/` : API 表、IDENT manifest、実ライブラリの全エクスポートが一致することを検出するテスト
 
 ## Lua API モック
 
