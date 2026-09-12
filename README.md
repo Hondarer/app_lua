@@ -26,7 +26,7 @@ C++ から利用する場合は、`lua.h` に `extern "C"` 宣言が含まれて
 ## パッケージの配置手順 (初回セットアップ)
 
 本リポジトリは Lua のソース アーカイブ (tar.gz) を Git 管理下に手動配置する運用です。  
-`app/lua/packages/` に、以下の手順で取得した tar.gz を 1 つだけ配置してください。
+`app/lua/packages/` に、次の手順で取得した tar.gz を 1 つだけ配置してください。
 
 ```sh
 curl -L -o app/lua/packages/lua-5.5.0.tar.gz \
@@ -51,8 +51,8 @@ Lua 本体への変更はすべてこのパッチ経由で行い、展開直後�
 ## バージョン更新手順
 
 1. 新しいバージョンの tar.gz を取得し、`app/lua/packages/` に追加します。
-2. 古いバージョンの tar.gz を削除する (`packages/` には常に 1 個のみを置く運用)。
-3. `make` を実行すると、`make_extract.stamp` に記録したアーカイブの情報と食い違うと判定され、自動的に再展開とパッチ適用が行われます。
+2. 古いバージョンの tar.gz を削除します (`packages/` には常に 1 個のみを配置する運用)。
+3. `make` を実行すると、`make_extract.stamp` に記録したアーカイブの情報と一致しないと判定され、自動的に再展開とパッチ適用が行われます。
 
 パッチを追加または変更した場合も同じスタンプで検知されるため、`make clean` は不要です。
 
@@ -60,7 +60,7 @@ Lua 本体への変更はすべてこのパッチ経由で行い、展開直後�
 
 Lua 本体は MIT License です。単体の `LICENSE` ファイルはアーカイブ内に同梱されておらず、`doc/readme.html` にライセンス条文が記載されています。詳細は [https://www.lua.org/license.html](https://www.lua.org/license.html) を参照してください。
 
-`app/lua` 直下の `LICENSE` (MIT License) は、本ディレクトリのラッパー コード (`bin/extract_package.py`、`makefile`/`makepart.mk` 等の手書きファイル) に対する著作権表示であり、Lua 本体 (`src/` 由来のファイル) には適用されません。
+`app/lua` 直下の `LICENSE` (MIT License) は、本ディレクトリのラッパー コード (`bin/extract_package.py`、`makefile`/`makepart.mk` 等の手動作成ファイル) に対する著作権表示であり、Lua 本体 (`src/` 由来のファイル) には適用されません。
 
 ## サンプルとテスト
 

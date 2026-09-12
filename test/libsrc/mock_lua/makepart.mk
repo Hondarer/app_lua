@@ -1,6 +1,6 @@
 ifdef PLATFORM_LINUX
     # Mock_lua::Mock_lua() コンストラクターが多数の ON_CALL を持つため、GCC の
-    # -fvar-tracking-assignments が内部サイズ制限を超え、以下のメッセージが出力されることがある。
+    # -fvar-tracking-assignments が内部サイズ制限を超え、次のメッセージが出力されることがある。
     #
     # mock_lua.cc:75:1: 備考: 変数追跡サイズ制限が -fvar-tracking-assignments を超過しています。
     # -fvar-tracking-assignments 無しで再度試みています
