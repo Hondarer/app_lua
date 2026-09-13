@@ -7,8 +7,9 @@ c-modernization-kit のワークスペース内 (`framework/makefw` 等と組み
 
 ## 概要
 
-[Lua](https://www.lua.org/) のコア VM・標準ライブラリ (`src/` 配下の `.c`/`.h`。  
-`lua.c`/`luac.c` を除く) および公式インタープリター (`lua.c`) を、c-modernization-kit の makefw 規約に沿って取り込んだラッパー ライブラリです。Lua 自体のソースは改変せず、リリース アーカイブをそのまま展開して利用します。バイトコード コンパイラ (`luac.c`) は取り込みません。
+[Lua](https://www.lua.org/) のコア VM・標準ライブラリ (`src/` 配下の `.c`/`.h`。`lua.c`/`luac.c` を除く) および公式インタープリター (`lua.c`) を、c-modernization-kit の makefw 規約に沿って取り込んだラッパー ライブラリです。  
+Lua のリリース アーカイブを展開し、本体への変更は [パッチ](patches/README.md) 経由で適用します。  
+バイトコード コンパイラ (`luac.c`) は取り込みません。
 
 Lua を利用するプログラムの単体テスト向けに、Google Mock 対応の Lua API モックも含みます。
 
