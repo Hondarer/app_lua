@@ -8,8 +8,8 @@ Lua 本体へ手を入れる唯一の方法は、このディレクトリへパ�
 
 ## 適用の仕組み
 
-`make` 実行時に `bin/extract_package.py` がアーカイブを展開し、続けてこのディレクトリのパッチを適用します。  
-適用器は `framework/makefw/bin/apply_patches.py` です。標準ライブラリだけで動作し、`patch` や `git apply` に依存しません。
+`make` 実行時に `bin_internal/extract_package.py` がアーカイブを展開し、続けてこのディレクトリのパッチを適用します。  
+適用器は `framework/makefw/bin_internal/apply_patches.py` です。標準ライブラリだけで動作し、`patch` や `git apply` に依存しません。
 
 適用は **厳密** です。文脈行が 1 バイトでも一致しない場合、探索や fuzz による救済を行わずビルドを停止します。  
 移行前の `extract_package.py` は、置換対象の文字列が見つからないと `ValueError` を送出してビルドを止めていました。  

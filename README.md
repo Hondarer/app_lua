@@ -36,11 +36,11 @@ curl -L -o app/lua/packages/lua-5.5.0.tar.gz \
 
 最新版は [https://www.lua.org/download.html](https://www.lua.org/download.html) でも確認できます。
 
-配置後、`make` (または `make test`) を実行すると、`app/lua/bin/extract_package.py` が自動的に `prod/include/`、`prod/libsrc/lua/`、`prod/src/cmd/lua/` へ展開します。  
+配置後、`make` (または `make test`) を実行すると、`app/lua/bin_internal/extract_package.py` が自動的に `prod/include/`、`prod/libsrc/lua/`、`prod/src/cmd/lua/` へ展開します。  
 展開先はいずれも生成物であり `.gitignore` 対象です。
 
 展開に続けて、`app/lua/patches/` の unified diff を自動的に適用します。  
-適用器は `framework/makefw/bin/apply_patches.py` (app 間で共有する適用器) です。  
+適用器は `framework/makefw/bin_internal/apply_patches.py` (app 間で共有する適用器) です。  
 Lua 本体への変更はすべてこのパッチ経由で行い、展開直後のファイルを直接編集することはありません。  
 パッチの一覧と個々の目的は [patches/README.md](patches/README.md) を参照してください。
 
@@ -61,7 +61,7 @@ Lua 本体への変更はすべてこのパッチ経由で行い、展開直後�
 
 Lua 本体は MIT License です。単体の `LICENSE` ファイルはアーカイブ内に同梱されておらず、`doc/readme.html` にライセンス条文が記載されています。詳細は [https://www.lua.org/license.html](https://www.lua.org/license.html) を参照してください。
 
-`app/lua` 直下の `LICENSE` (MIT License) は、本ディレクトリのラッパー コード (`bin/extract_package.py`、`makefile`/`makepart.mk` 等の手動作成ファイル) に対する著作権表示であり、Lua 本体 (`src/` 由来のファイル) には適用されません。
+`app/lua` 直下の `LICENSE` (MIT License) は、本ディレクトリのラッパー コード (`bin_internal/extract_package.py`、`makefile`/`makepart.mk` 等の手動作成ファイル) に対する著作権表示であり、Lua 本体 (`src/` 由来のファイル) には適用されません。
 
 ## サンプルとテスト
 

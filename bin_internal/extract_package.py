@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""app/lua/bin/extract_package.py
+"""app/lua/bin_internal/extract_package.py
 
 packages/ 配下の Lua ソース アーカイブ (tar.gz) を prod/include,
 prod/libsrc/lua, prod/src/cmd/lua へ展開する。外部ツール (tar 等) に
 依存せず、標準ライブラリ tarfile のみを使用する。
 
-展開後、patches/ 配下の unified diff (framework/makefw/bin/apply_patches.py)
+展開後、patches/ 配下の unified diff (framework/makefw/bin_internal/apply_patches.py)
 を順に適用する。tar の内容は加工せずそのまま書き出し、Lua 本体への
 改変はすべてパッチ側で行う。
 """
@@ -375,12 +375,12 @@ def main():
     parser.add_argument(
         "--makefw-home",
         required=True,
-        help="framework/makefw のパス。<makefw-home>/bin を sys.path へ加えて "
+        help="framework/makefw のパス。<makefw-home>/bin_internal を sys.path へ加えて "
         "apply_patches を import するために使う。",
     )
     args = parser.parse_args()
 
-    sys.path.insert(0, os.path.join(args.makefw_home, "bin"))
+    sys.path.insert(0, os.path.join(args.makefw_home, "bin_internal"))
     import apply_patches  # noqa: E402  (sys.path 設定後に import する)
 
     packages_dir = os.path.join(args.app_dir, "packages")
