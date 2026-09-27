@@ -29,6 +29,8 @@ Lua 本体へ手を入れる唯一の方法は、このディレクトリへパ�
 | `0001-windows-dll-build-as-dll.patch` | `prod/include/luaconf.h` | Windows で既定の `LUA_BUILD_AS_DLL` を定義します。 |
 | `0002-lua-api-gcc-visibility.patch` | `prod/include/luaconf.h` | GCC で `LUA_API` へ `visibility("default")` を付けます。 |
 
+Table: 収録パッチの一覧と適用対象および目的
+
 `0001` は先頭への前置、`0002` は本文中の `#define LUA_API extern` の置き換えです。  
 3 つの外来 OSS のなかで本文置換を行うのは Lua だけであり、パッチ形式にした効果が最も大きい対象です。  
 前置と本文置換は目的が異なるため、意図を読み取りやすいよう 2 本に分けています。

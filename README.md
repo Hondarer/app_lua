@@ -115,5 +115,7 @@ Lua ヘッダーでマクロとして提供される API は、展開後に呼�
 | `luaL_openlibs` | `luaL_openselectedlibs` |
 | `luaL_dostring` | `luaL_loadstring` と `lua_pcallk` |
 
+Table: Lua API マクロと展開先関数
+
 `lua_getextraspace` と `luaL_addchar` などの Buffer マクロは、`lua_State` や `luaL_Buffer` の領域を直接操作します。  
 偽ポインターを返す場合は、これらのマクロを使わないか、実オブジェクトを用意してください。
