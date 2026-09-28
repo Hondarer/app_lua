@@ -9,10 +9,15 @@
 # see: framework/makefw/docs/makeparts.md
 # (app/cjson/makepart.mk、app/sqlite/makepart.mk と同じ構造)
 
+# 同じ make 実行内の子 make では確認済みの app ディレクトリを LUA_EXTRACT_DONE で引き継ぎ、
+# Python の起動を 1 回に抑える (理由は app/cjson/makepart.mk を参照)。
 ifndef MAKEFW_SYNC_EVAL
-    _LUA_EXTRACT_STATUS := $(shell python3 "$(MYAPP_DIR)/bin_internal/extract_package.py" --app-dir "$(MYAPP_DIR)" --makefw-home "$(MAKEFW_HOME)" >&2; echo $$?)
-    ifneq ($(_LUA_EXTRACT_STATUS),0)
-        $(error Lua パッケージの準備に失敗しました。上記のメッセージに従って app/lua/packages にアーカイブを配置してください)
+    ifneq ($(LUA_EXTRACT_DONE),$(MYAPP_DIR))
+        _LUA_EXTRACT_STATUS := $(shell python3 "$(MYAPP_DIR)/bin_internal/extract_package.py" --app-dir "$(MYAPP_DIR)" --makefw-home "$(MAKEFW_HOME)" >&2; echo $$?)
+        ifneq ($(_LUA_EXTRACT_STATUS),0)
+            $(error Lua パッケージの準備に失敗しました。上記のメッセージに従って app/lua/packages にアーカイブを配置してください)
+        endif
+        export LUA_EXTRACT_DONE := $(MYAPP_DIR)
     endif
 endif
 
