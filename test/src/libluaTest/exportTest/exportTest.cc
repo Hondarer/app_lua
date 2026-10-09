@@ -56,6 +56,7 @@ TEST(exportTest, lua_symbols_match_api_table)
     std::set<std::string> actual = testing::getActualExportNames(path); // [手順] - liblua のエクスポート名を取得する。
 
     // Assert
+    // [サブ手順参照 名前=testing.expectExportNamesMatch]
     testing::expectExportNamesMatch(expected,
-                                    actual); // [確認_正常系 回数=2] - liblua のエクスポートに不足や想定外がないこと。
+                                    actual); // liblua のエクスポートに不足や想定外がないこと。
 }
