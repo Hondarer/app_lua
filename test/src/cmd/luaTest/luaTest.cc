@@ -19,9 +19,11 @@ TEST_F(luaTest, dostring_returns_evaluated_expression)
     int status = luaL_dostring(L, "return 1 + 1"); // [手順] - luaL_dostring で "return 1 + 1" を実行する。
 
     // Assert
-    ASSERT_EQ(LUA_OK, status);          // [確認_正常系] - luaL_dostring の戻り値が LUA_OK であること。
-    ASSERT_TRUE(lua_isinteger(L, -1));  // [確認_正常系] - スタック トップの値が整数型であること。
-    EXPECT_EQ(2, lua_tointeger(L, -1)); // [確認_正常系] - スタック トップの値が 2 であること。
+    ASSERT_EQ(LUA_OK, status); // [確認_正常系] - luaL_dostring() の戻り値が LUA_OK であること。
+    ASSERT_TRUE(
+        lua_isinteger(L, -1)); // [確認_正常系] - スタック トップに対する lua_isinteger() の戻り値が true であること。
+    EXPECT_EQ(
+        2, lua_tointeger(L, -1)); // [確認_正常系] - スタック トップに対する lua_tointeger() の戻り値が 2 であること。
 
     // Cleanup
     lua_close(L);
@@ -40,8 +42,12 @@ TEST_F(luaTest, loadstring_invalid_syntax_returns_error)
     int status = luaL_loadstring(L, "return 1 +"); // [手順] - 構文が不完全なスクリプトを luaL_loadstring に渡す。
 
     // Assert
-    EXPECT_EQ(LUA_ERRSYNTAX, status);        // [確認_異常系] - luaL_loadstring の戻り値が LUA_ERRSYNTAX であること。
-    EXPECT_NE(nullptr, lua_tostring(L, -1)); // [確認_異常系] - スタック トップにエラー メッセージが積まれること。
+    EXPECT_EQ(LUA_ERRSYNTAX, status); // [確認_異常系] - luaL_loadstring() の戻り値が LUA_ERRSYNTAX であること。
+    EXPECT_NE(
+        nullptr,
+        lua_tostring(
+            L,
+            -1)); // [確認_異常系] - スタック トップに対する lua_tostring() の戻り値が nullptr 以外であること。(エラー メッセージが積まれることの確認)
 
     // Cleanup
     lua_close(L);
@@ -64,9 +70,14 @@ TEST_F(luaTest, global_variable_roundtrip)
     lua_getglobal(L, "answer");                  // [手順] - グローバル変数 "answer" をスタックへ積む。
 
     // Assert
-    ASSERT_EQ(LUA_OK, status);           // [確認_正常系] - luaL_dostring の戻り値が LUA_OK であること。
-    ASSERT_TRUE(lua_isinteger(L, -1));   // [確認_正常系] - スタック トップの値が整数型であること。
-    EXPECT_EQ(43, lua_tointeger(L, -1)); // [確認_正常系] - answer の値が 43 (42 に 1 を加算した値) であること。
+    ASSERT_EQ(LUA_OK, status); // [確認_正常系] - luaL_dostring() の戻り値が LUA_OK であること。
+    ASSERT_TRUE(
+        lua_isinteger(L, -1)); // [確認_正常系] - スタック トップに対する lua_isinteger() の戻り値が true であること。
+    EXPECT_EQ(
+        43,
+        lua_tointeger(
+            L,
+            -1)); // [確認_正常系] - スタック トップに対する lua_tointeger() の戻り値が 43 であること。(グローバル変数 answer が 42 に 1 を加算した値であることの確認)
 
     // Cleanup
     lua_close(L);
