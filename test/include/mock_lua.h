@@ -34,7 +34,7 @@ class Mock_lua
     MOCK_METHOD(int, luaL_error, (lua_State *, const char *, va_list));
 
     Mock_lua();
-    ~Mock_lua();
+    virtual ~Mock_lua();
 };
 
 extern Mock_lua *_mock_lua;
