@@ -2,7 +2,7 @@
 
 #include <mock_lua.h>
 
-// Mock_lua を生成しない場合に Lua の実関数へ委譲されることの確認
+// Mock_lua を生成しない場合に Lua の処理へ委譲されることの確認
 TEST(mockLuaTest, delegates_to_real_without_mock)
 {
     // Arrange
@@ -10,7 +10,7 @@ TEST(mockLuaTest, delegates_to_real_without_mock)
     // Pre-Assert
 
     // Act
-    lua_State *state = luaL_newstate(); // [手順] - Mock_lua を生成せず luaL_newstate を呼び出す。
+    lua_State *state = luaL_newstate(); // [手順] - Mock_lua を生成しない状態で luaL_newstate() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr, state); // [確認_正常系] - luaL_newstate() の戻り値が nullptr 以外であること。
@@ -19,7 +19,7 @@ TEST(mockLuaTest, delegates_to_real_without_mock)
     lua_close(state);
 }
 
-// 注入済み Mock_lua の未設定呼び出しが Lua の実関数へ委譲されることの確認
+// 注入済み Mock_lua の未設定呼び出しが Lua の処理へ委譲されることの確認
 TEST(mockLuaTest, delegates_to_real_with_default_action)
 {
     // Arrange
@@ -28,7 +28,7 @@ TEST(mockLuaTest, delegates_to_real_with_default_action)
     // Pre-Assert
 
     // Act
-    lua_State *state = luaL_newstate(); // [手順] - 既定動作の Mock_lua を介して luaL_newstate を呼び出す。
+    lua_State *state = luaL_newstate(); // [手順] - 既定動作の Mock_lua を介して luaL_newstate() を呼び出す。
 
     // Assert
     ASSERT_NE(nullptr, state); // [確認_正常系] - luaL_newstate() の戻り値が nullptr 以外であること。
@@ -47,16 +47,16 @@ TEST(mockLuaTest, overrides_result)
     // Pre-Assert
     EXPECT_CALL(mock_lua, luaL_newstate())
         .WillOnce(Return(expected)); // [Pre-Assert確認_正常系] - luaL_newstate() が 1 回呼び出されること。
-                                     // [Pre-Assert手順] - luaL_newstate から expected を返却する。
+                                     // [Pre-Assert手順] - luaL_newstate() から expected を返す。
 
     // Act
-    lua_State *actual = luaL_newstate(); // [手順] - 戻り値を設定した Mock_lua を介して luaL_newstate を呼び出す。
+    lua_State *actual = luaL_newstate(); // [手順] - 戻り値を設定した Mock_lua を介して luaL_newstate() を呼び出す。
 
     // Assert
     EXPECT_EQ(expected, actual); // [確認_正常系] - luaL_newstate() の戻り値が expected と一致すること。
 }
 
-// 可変長引数を受け取る lua_pushfstring の既定動作が実関数へ委譲されることの確認
+// 可変長引数を受け取る lua_pushfstring の既定動作が Lua の処理へ委譲されることの確認
 TEST(mockLuaTest, delegates_variadic_format_to_real)
 {
     // Arrange
@@ -88,7 +88,7 @@ TEST(mockLuaTest, overrides_variadic_gc_result)
     EXPECT_CALL(mock_lua, lua_gc(state, LUA_GCCOUNT, _))
         .WillOnce(
             Return(123)); // [Pre-Assert確認_正常系] - lua_gc() が state、LUA_GCCOUNT を指定して 1 回呼び出されること。
-                          // [Pre-Assert手順] - lua_gc() から 123 を返却する。
+                          // [Pre-Assert手順] - lua_gc() から 123 を返す。
 
     // Act
     int actual = lua_gc(state, LUA_GCCOUNT); // [手順] - 戻り値を設定した Mock_lua を介して lua_gc() を呼び出す。
@@ -108,24 +108,24 @@ TEST(mockLuaTest, isolates_calls_without_real_state)
     // Pre-Assert
     EXPECT_CALL(mock_lua, luaL_newstate())
         .WillOnce(Return(state)); // [Pre-Assert確認_正常系] - luaL_newstate() が 1 回呼び出されること。
-                                  // [Pre-Assert手順] - luaL_newstate() から state を返却する。
+                                  // [Pre-Assert手順] - luaL_newstate() から state を返す。
     EXPECT_CALL(mock_lua, lua_getglobal(state, StrEq("name")))
         .WillOnce(Return(
             LUA_TSTRING)); // [Pre-Assert確認_正常系] - lua_getglobal() が state、"name" と等しい文字列を指定して 1 回呼び出されること。
-                           // [Pre-Assert手順] - lua_getglobal() から LUA_TSTRING を返却する。
+                           // [Pre-Assert手順] - lua_getglobal() から LUA_TSTRING を返す。
     EXPECT_CALL(mock_lua, lua_tolstring(state, -1, nullptr))
         .WillOnce(Return(
             expected)); // [Pre-Assert確認_正常系] - lua_tolstring() が state、-1、nullptr を指定して 1 回呼び出されること。
-                        // [Pre-Assert手順] - lua_tolstring() から expected を返却する。
+                        // [Pre-Assert手順] - lua_tolstring() から expected を返す。
     EXPECT_CALL(mock_lua, lua_close(state))
         .WillOnce(Return()); // [Pre-Assert確認_正常系] - lua_close() が state を指定して 1 回呼び出されること。
-                             // [Pre-Assert手順] - lua_close() から直ちに戻る。
+                             // [Pre-Assert手順] - lua_close() から戻る。
 
     // Act
     lua_State *actual = luaL_newstate();         // [手順] - luaL_newstate() を呼び出す。
-    lua_getglobal(actual, "name");               // [手順] - lua_getglobal() で name を取得する。
-    const char *text = lua_tostring(actual, -1); // [手順] - lua_tostring() で文字列を取得する。
-    lua_close(actual);                           // [手順] - lua_close() で状態を閉じる。
+    lua_getglobal(actual, "name");               // [手順] - name を指定して lua_getglobal() を呼び出す。
+    const char *text = lua_tostring(actual, -1); // [手順] - スタック トップを指定して lua_tostring() を呼び出す。
+    lua_close(actual);                           // [手順] - actual を指定して lua_close() を呼び出す。
 
     // Assert
     EXPECT_EQ(state, actual);     // [確認_正常系] - luaL_newstate() の戻り値が state と一致すること。

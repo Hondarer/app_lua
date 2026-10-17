@@ -16,7 +16,7 @@ TEST_F(luaTest, dostring_returns_evaluated_expression)
     // Pre-Assert
 
     // Act
-    int status = luaL_dostring(L, "return 1 + 1"); // [手順] - luaL_dostring で "return 1 + 1" を実行する。
+    int status = luaL_dostring(L, "return 1 + 1"); // [手順] - "return 1 + 1" を指定して luaL_dostring() を呼び出す。
 
     // Assert
     ASSERT_EQ(LUA_OK, status); // [確認_正常系] - luaL_dostring() の戻り値が LUA_OK であること。
@@ -39,7 +39,8 @@ TEST_F(luaTest, loadstring_invalid_syntax_returns_error)
     // Pre-Assert
 
     // Act
-    int status = luaL_loadstring(L, "return 1 +"); // [手順] - 構文が不完全なスクリプトを luaL_loadstring に渡す。
+    int status = luaL_loadstring(
+        L, "return 1 +"); // [手順] - 構文が不完全なスクリプト "return 1 +" を指定して luaL_loadstring() を呼び出す。
 
     // Assert
     EXPECT_EQ(LUA_ERRSYNTAX, status); // [確認_異常系] - luaL_loadstring() の戻り値が LUA_ERRSYNTAX であること。
@@ -63,11 +64,12 @@ TEST_F(luaTest, global_variable_roundtrip)
     // Pre-Assert
 
     // Act
-    lua_pushinteger(L, 42);     // [手順] - 整数値 42 をスタックへ積む。
-    lua_setglobal(L, "answer"); // [手順] - スタック トップの値をグローバル変数 "answer" へ設定する。
-    int status =
-        luaL_dostring(L, "answer = answer + 1"); // [手順] - グローバル変数 answer を 1 加算するスクリプトを実行する。
-    lua_getglobal(L, "answer");                  // [手順] - グローバル変数 "answer" をスタックへ積む。
+    lua_pushinteger(L, 42);     // [手順] - 整数値 42 を指定して lua_pushinteger() を呼び出す。
+    lua_setglobal(L, "answer"); // [手順] - グローバル変数 "answer" を指定して lua_setglobal() を呼び出す。
+    int status = luaL_dostring(
+        L,
+        "answer = answer + 1"); // [手順] - グローバル変数 answer を 1 加算するスクリプトを指定して luaL_dostring() を呼び出す。
+    lua_getglobal(L, "answer"); // [手順] - グローバル変数 "answer" を指定して lua_getglobal() を呼び出す。
 
     // Assert
     ASSERT_EQ(LUA_OK, status); // [確認_正常系] - luaL_dostring() の戻り値が LUA_OK であること。
