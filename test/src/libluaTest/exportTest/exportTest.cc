@@ -36,7 +36,7 @@ static const char *const kExpectedExportNames[] = {
     "luaL_error",
 };
 
-// liblua の期待シンボルと実ライブラリの全エクスポートが一致することの確認
+// liblua_app の期待シンボルと実ライブラリの全エクスポートが一致することの確認
 TEST(exportTest, lua_symbols_match_api_table)
 {
     // Arrange
@@ -45,10 +45,10 @@ TEST(exportTest, lua_symbols_match_api_table)
         std::end(kExpectedExportNames)); // [状態] - mock_lua の API 表から期待する公開関数名を構築する。
 #if defined(PLATFORM_WINDOWS)
     expected.insert(testing::identManifestSymbolName(
-        "liblua" TESTFW_SHARED_LIBRARY_EXTENSION)); // [状態] - IDENT manifest シンボル名を期待値へ追加する。
+        "liblua_app" TESTFW_SHARED_LIBRARY_EXTENSION)); // [状態] - IDENT manifest シンボル名を期待値へ追加する。
 #endif                                              /* PLATFORM_WINDOWS */
-    std::string path = findWorkspaceRoot() + "/app/lua/prod/lib/liblua" +
-                       TESTFW_SHARED_LIBRARY_EXTENSION; // [状態] - 検査対象を liblua の動的ライブラリとする。
+    std::string path = findWorkspaceRoot() + "/app/lua/prod/lib/liblua_app" +
+                       TESTFW_SHARED_LIBRARY_EXTENSION; // [状態] - 検査対象を liblua_app の動的ライブラリとする。
 
     // Pre-Assert
 
@@ -59,5 +59,5 @@ TEST(exportTest, lua_symbols_match_api_table)
     // Assert
     // [サブ手順参照 名前=testing.expectExportNamesMatch]
     testing::expectExportNamesMatch(expected,
-                                    actual); // liblua のエクスポートに不足や想定外がないこと。
+                                    actual); // liblua_app のエクスポートに不足や想定外がないこと。
 }

@@ -6,7 +6,7 @@
 
 #include <cstdarg>
 
-inline constexpr char kLibLuaName[] = "liblua" TESTFW_SHARED_LIBRARY_EXTENSION;
+inline constexpr char kLibLuaName[] = "liblua_app" TESTFW_SHARED_LIBRARY_EXTENSION;
 
 #define MOCK_LUA_RET(return_type, name, parameters, arguments, matchers) \
     extern return_type delegate_real_##name parameters;

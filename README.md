@@ -15,10 +15,10 @@ Lua を利用するプログラムの単体テスト向けに、Google Mock 対�
 
 ビルド成果物は動的ライブラリと、`lua.c` から生成する `lua` コマンド (公式インタープリター) です。
 
-- Linux: `liblua.so`
-- Windows: `liblua.dll` およびリンク用の import library `liblua.lib`
+- Linux: `liblua_app.so`
+- Windows: `liblua_app.dll` およびリンク用の import library `liblua_app.lib`
 
-静的ライブラリ (`liblua.a` および静的リンク用の `liblua.lib`) は生成しません。
+静的ライブラリは生成しません。
 
 `lua` コマンドは行編集オプション (`LUA_USE_READLINE`) を定義しない最小構成でビルドしており、`readline`/`editline` 等の外部ライブラリには依存しません。Linux ビルドでは、Lua 公式ビルドの `linux` ターゲットに合わせて `LUA_USE_LINUX` を定義しています。
 
@@ -73,8 +73,8 @@ Lua 本体は MIT License です。単体の `LICENSE` ファイルはアーカ�
 ## Lua API モック
 
 Lua を利用するアプリの単体テストでは、`<mock_lua.h>` と `libmock_lua` を使用できます。  
-テスト対象の `makepart.mk` では、`lua` の代わりに `mock_lua` をリンクします。  
-`lua` と `mock_lua` を同時にリンクしないでください。Linux では実ライブラリの強シンボルが弱定義のモックを上書きし、`EXPECT_CALL` が効かなくなります。
+テスト対象の `makepart.mk` では、`lua_app` の代わりに `mock_lua` をリンクします。  
+`lua_app` と `mock_lua` を同時にリンクしないでください。Linux では実ライブラリの強シンボルが弱定義のモックを上書きし、`EXPECT_CALL` が効かなくなります。
 
 ```makefile
 ifdef PLATFORM_WINDOWS
@@ -86,7 +86,7 @@ LIBS += mock_lua
 
 Windows では、`LUA_CORE` により Lua の DLL import 宣言を無効にし、`mock_lua` が提供する実シンボルを参照します。  
 `Mock_lua` を生成しない場合と、生成後に `EXPECT_CALL` や `ON_CALL` を設定しない場合は、動的ライブラリの実関数を呼び出します。  
-実関数への委譲では、Linux の `LD_LIBRARY_PATH` または Windows の `PATH` から `liblua` を読み込みます。
+実関数への委譲では、Linux の `LD_LIBRARY_PATH` または Windows の `PATH` から `liblua_app` を読み込みます。
 
 振る舞いを変更するテストでは、`Mock_lua` を生成して `EXPECT_CALL` または `ON_CALL` を指定します。
 

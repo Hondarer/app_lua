@@ -15,7 +15,7 @@ ifdef PLATFORM_WINDOWS
     CXXFLAGS += /wd4310 /wd4324 /wd4701 /wd4702 /wd4709
 endif
 
-LIBS += lua
+LIBS += lua_app
 
 ifdef PLATFORM_LINUX
     # Lua の数学関数に libm、loadlib.c の動的ライブラリ読み込み実装に libdl が必要
