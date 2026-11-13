@@ -6,12 +6,12 @@
 #include <string>
 #include <type_traits>
 
-#define MOCK_LUA_RET(return_type, name, parameters, arguments, matchers) \
-    using expected_##name##_fn = return_type(*) parameters; \
-    static_assert(std::is_same<decltype(&name), expected_##name##_fn>::value, #name " のシグネチャが不一致です");
-#define MOCK_LUA_VOID(return_type, name, parameters, arguments, matchers) \
-    using expected_##name##_fn = return_type(*) parameters; \
-    static_assert(std::is_same<decltype(&name), expected_##name##_fn>::value, #name " のシグネチャが不一致です");
+#define MOCK_LUA_RET(return_type, original_name, api_name, real_parameters, real_arguments, mock_parameters, mock_arguments, matchers) \
+    using expected_##original_name##_fn = return_type(*) real_parameters; \
+    static_assert(std::is_same<decltype(&api_name), expected_##original_name##_fn>::value, #api_name " のシグネチャが不一致です");
+#define MOCK_LUA_VOID(return_type, original_name, api_name, real_parameters, real_arguments, mock_parameters, mock_arguments, matchers) \
+    using expected_##original_name##_fn = return_type(*) real_parameters; \
+    static_assert(std::is_same<decltype(&api_name), expected_##original_name##_fn>::value, #api_name " のシグネチャが不一致です");
 #include <mock_lua_api_table.h>
 #undef MOCK_LUA_VOID
 #undef MOCK_LUA_RET
@@ -19,21 +19,21 @@
 using expected_lua_pushfstring_fn = const char *(*)(lua_State *, const char *, ...);
 using expected_lua_gc_fn = int (*)(lua_State *, int, ...);
 using expected_luaL_error_fn = int (*)(lua_State *, const char *, ...);
-static_assert(std::is_same<decltype(&lua_pushfstring), expected_lua_pushfstring_fn>::value,
+static_assert(std::is_same<decltype(&lua_app_lua_pushfstring), expected_lua_pushfstring_fn>::value,
               "lua_pushfstring のシグネチャが不一致です");
-static_assert(std::is_same<decltype(&lua_gc), expected_lua_gc_fn>::value, "lua_gc のシグネチャが不一致です");
-static_assert(std::is_same<decltype(&luaL_error), expected_luaL_error_fn>::value,
+static_assert(std::is_same<decltype(&lua_app_lua_gc), expected_lua_gc_fn>::value, "lua_gc のシグネチャが不一致です");
+static_assert(std::is_same<decltype(&lua_app_luaL_error), expected_luaL_error_fn>::value,
               "luaL_error のシグネチャが不一致です");
 
 static const char *const kExpectedExportNames[] = {
-#define MOCK_LUA_RET(return_type, name, parameters, arguments, matchers)  #name,
-#define MOCK_LUA_VOID(return_type, name, parameters, arguments, matchers) #name,
+#define MOCK_LUA_RET(return_type, original_name, api_name, real_parameters, real_arguments, mock_parameters, mock_arguments, matchers)  #api_name,
+#define MOCK_LUA_VOID(return_type, original_name, api_name, real_parameters, real_arguments, mock_parameters, mock_arguments, matchers) #api_name,
 #include <mock_lua_api_table.h>
 #undef MOCK_LUA_VOID
 #undef MOCK_LUA_RET
-    "lua_pushfstring",
-    "lua_gc",
-    "luaL_error",
+    "lua_app_lua_pushfstring",
+    "lua_app_lua_gc",
+    "lua_app_luaL_error",
 };
 
 // liblua_app の期待シンボルと実ライブラリの全エクスポートが一致することの確認

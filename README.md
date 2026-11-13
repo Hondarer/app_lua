@@ -5,6 +5,14 @@
 このリポジトリ (ディレクトリ) は [c-modernization-kit](https://github.com/Hondarer/c-modernization-kit) の `app/lua` として管理される、個別アプリです。  
 c-modernization-kit のワークスペース内 (`framework/makefw` 等と組み合わせた make ビルド環境) で利用することを前提としたアプリであり、本ディレクトリ単体ではビルドできません。
 
+## 固有の公開 API 名で OS のライブラリと分離します
+
+OS の同名ライブラリと同じプロセスで関数解決が混ざることを防ぐため、公開関数・変数と関数呼び出しマクロに `lua_app_` を付けます。  
+たとえば `luaL_newstate` の利用側は `lua_app_luaL_newstate` を呼び出します。  
+型名、定数、構造体フィールドは配布ライブラリの定義を使います。  
+旧名の alias と mock ラッパーは提供しないため、既存の利用側はソースを更新して再ビルド・再リンクしてください。  
+`dlsym()` と `GetProcAddress()` に渡す文字列も固有名へ変更します。
+
 ## 概要
 
 [Lua](https://www.lua.org/) のコア VM・標準ライブラリ (`src/` 配下の `.c`/`.h`。`lua.c`/`luac.c` を除く) および公式インタープリター (`lua.c`) を、c-modernization-kit の makefw 規約に沿って取り込んだラッパー ライブラリです。  
@@ -23,6 +31,9 @@ Lua を利用するプログラムの単体テスト向けに、Google Mock 対�
 `lua` コマンドは行編集オプション (`LUA_USE_READLINE`) を定義しない最小構成でビルドしており、`readline`/`editline` 等の外部ライブラリには依存しません。Linux ビルドでは、Lua 公式ビルドの `linux` ターゲットに合わせて `LUA_USE_LINUX` を定義しています。
 
 C++ から利用する場合は、`lua.h` に `extern "C"` 宣言が含まれていないため、個別ヘッダーではなく `<lua.hpp>` を include してください (`test/src/cmd/luaTest/` を参照)。
+
+本体が公開する `luaopen_*` 関数にも `lua_app_` を付けますが、外部 C モジュールの入口を探す `luaopen_<モジュール名>` の規則は維持します。  
+本体の API を直接使う外部モジュールは、このワークスペースのヘッダーとライブラリで再ビルドしてください。
 
 ## パッケージの配置手順 (初回セットアップ)
 
@@ -72,6 +83,17 @@ Lua 本体は MIT License です。単体の `LICENSE` ファイルはアーカ�
 
 ## Lua API モック
 
+テスト対象ソースを `TEST_SRCS` に指定し、mock をリンクするテストの `makepart.mk` に `DEFINES += MOCK_LUA_ENABLE_CALLER` を追加します。  
+これにより呼び出し元情報の注入を有効にし、実ライブラリを使うテストには注入しません。
+
+mock の宣言と注入マクロは API 表から生成し、mock ライブラリのビルド前に自動更新します。  
+生成済みの `test/include/mock_lua_overrides.h` は直接編集せず、通常 API 表と、可変長 API がある場合は専用の可変長 API 表を変更してください。
+
+通常の API 呼び出しは差し替えヘッダーを通し、mock の先頭 3 引数へ呼び出し元のファイル名、行番号、関数名を渡します。  
+`EXPECT_CALL` と `ON_CALL` でも、この 3 引数を実 API の引数より先に指定します。  
+新しい固有名の関数アドレスを取得して関数ポインター経由で呼び出す場合も mock に到達しますが、呼び出し元は取得できないため、ファイル名と関数名は `"<unknown>"`、行番号は `0` になります。  
+実委譲は app の固有シンボルだけを解決し、OS 側の旧名へ戻す探索は行いません。
+
 Lua を利用するアプリの単体テストでは、`<mock_lua.h>` と `libmock_lua` を使用できます。  
 テスト対象の `makepart.mk` では、`lua_app` の代わりに `mock_lua` をリンクします。  
 `lua_app` と `mock_lua` を同時にリンクしないでください。Linux では実ライブラリの強シンボルが弱定義のモックを上書きし、`EXPECT_CALL` が効かなくなります。
@@ -92,30 +114,32 @@ Windows では、`LUA_CORE` により Lua の DLL import 宣言を無効にし�
 
 ```cpp
 NiceMock<Mock_lua> mock_lua;
-EXPECT_CALL(mock_lua, luaL_newstate()).WillOnce(Return(nullptr));
+EXPECT_CALL(mock_lua, lua_app_luaL_newstate(_, _, _)).WillOnce(Return(nullptr));
 ```
 
 実の `lua_State` を作らずに単体隔離する場合は、SUT が呼び出す関数をすべてスタブしてください。  
 スタブしていない呼び出しは実関数へ委譲されるため、偽ポインターを渡すと実関数が失敗します。
 
-`lua_pushfstring`、`lua_gc`、`luaL_error` は、可変長引数を `va_list` としてモックへ渡します。  
+`lua_app_lua_pushfstring`、`lua_app_lua_gc`、`lua_app_luaL_error` は、可変長引数を `va_list` としてモックへ渡します。  
 引数の内容を照合しない場合は、該当する `va_list` 引数に `_` を指定してください。
 
 Lua ヘッダーでマクロとして提供される API は、展開後に呼び出される関数をモックしてください。
 
 | マクロ | 展開先 |
 |---|---|
-| `lua_pop` | `lua_settop` |
-| `lua_tostring` | `lua_tolstring` |
-| `lua_tonumber` | `lua_tonumberx` |
-| `lua_pcall` | `lua_pcallk` |
-| `lua_call` | `lua_callk` |
-| `lua_newtable` | `lua_createtable` |
-| `lua_pushcfunction` | `lua_pushcclosure` |
-| `luaL_openlibs` | `luaL_openselectedlibs` |
-| `luaL_dostring` | `luaL_loadstring` と `lua_pcallk` |
+| `lua_app_lua_pop` | `lua_app_lua_settop` |
+| `lua_app_lua_tostring` | `lua_app_lua_tolstring` |
+| `lua_app_lua_tonumber` | `lua_app_lua_tonumberx` |
+| `lua_app_lua_pcall` | `lua_app_lua_pcallk` |
+| `lua_app_lua_call` | `lua_app_lua_callk` |
+| `lua_app_lua_newtable` | `lua_app_lua_createtable` |
+| `lua_app_lua_pushcfunction` | `lua_app_lua_pushcclosure` |
+| `lua_app_luaL_openlibs` | `lua_app_luaL_openselectedlibs` |
+| `lua_app_luaL_dostring` | `lua_app_luaL_loadstring` と `lua_app_lua_pcallk` |
+| `lua_app_luaL_dofile` | `lua_app_luaL_loadfilex` と `lua_app_lua_pcallk` |
+| `lua_app_luaL_opt` | `lua_app_lua_type` による判定と、引数で受け取った関数 |
 
 Table: Lua API マクロと展開先関数
 
-`lua_getextraspace` と `luaL_addchar` などの Buffer マクロは、`lua_State` や `luaL_Buffer` の領域を直接操作します。  
+`lua_getextraspace` と `lua_app_luaL_addchar` などの Buffer マクロは、`lua_State` や `luaL_Buffer` の領域を直接操作します。  
 偽ポインターを返す場合は、これらのマクロを使わないか、実オブジェクトを用意してください。

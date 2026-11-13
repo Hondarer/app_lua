@@ -1,0 +1,3 @@
+# app/lua/packages 配下の tar.gz から展開される生成物。手動改変しないため Git 管理対象外とする。
+/lua_app_namespace.h
+/lua_app_undef.h

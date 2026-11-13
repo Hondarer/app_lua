@@ -1,4 +1,6 @@
+#define MOCK_LUA_DISABLE_CALLER_INJECTION
 #include <mock_lua.h>
+#undef MOCK_LUA_DISABLE_CALLER_INJECTION
 
 #include <cstdio>
 #include <type_traits>
@@ -8,14 +10,15 @@ Mock_lua *_mock_lua = nullptr;
 namespace
 {
 
-template <typename T> void trace_result(const char *func, const T value)
+template <typename T> void trace_result(const char *func, const char *caller_file, const int caller_line,
+                                       const char *caller_function, const T value)
 {
     if (getTraceLevel() <= TRACE_NONE)
     {
         return;
     }
 
-    std::printf("  > %s", func);
+    std::printf("  > %s (%s:%d %s)", func, caller_file, caller_line, caller_function);
     if (getTraceLevel() >= TRACE_DETAIL)
     {
         if constexpr (std::is_pointer_v<T>)
@@ -37,11 +40,11 @@ template <typename T> void trace_result(const char *func, const T value)
     }
 }
 
-void trace_void(const char *func)
+void trace_void(const char *func, const char *caller_file, const int caller_line, const char *caller_function)
 {
     if (getTraceLevel() > TRACE_NONE)
     {
-        std::printf("  > %s\n", func);
+        std::printf("  > %s (%s:%d %s)\n", func, caller_file, caller_line, caller_function);
     }
 }
 
@@ -55,44 +58,56 @@ void trace_void(const char *func)
 
 #define MOCK_LUA_EXPAND(...) __VA_ARGS__
 
-#define MOCK_LUA_RET(return_type, name, parameters, arguments, matchers) \
-    return_type delegate_real_##name parameters \
+#define MOCK_LUA_RET(return_type, original_name, api_name, parameters, arguments, mock_parameters, mock_arguments, matchers) \
+    return_type delegate_real_##api_name mock_parameters \
     { \
-        static auto real_fn = reinterpret_cast<decltype(&name)>(resolveSharedSymbolOrExit(kLibLuaName, #name)); \
+        (void)caller_file; \
+        (void)caller_line; \
+        (void)caller_function; \
+        static auto real_fn = reinterpret_cast<decltype(&api_name)>(resolveSharedSymbolOrExit(kLibLuaName, #api_name)); \
         return real_fn arguments; \
     } \
-    MOCK_LUA_IMPL(return_type, name, MOCK_LUA_EXPAND parameters) \
+    MOCK_LUA_IMPL(return_type, api_name, MOCK_LUA_EXPAND parameters) \
+    { \
+        const char *caller_file = "<unknown>"; \
+        const int caller_line = 0; \
+        const char *caller_function = "<unknown>"; \
+        return mock_##api_name mock_arguments; \
+    } \
+    extern "C" return_type mock_##api_name mock_parameters \
     { \
         return_type return_value; \
         if (_mock_lua != nullptr) \
-        { \
-            return_value = _mock_lua->name arguments; \
-        } \
+            return_value = _mock_lua->api_name mock_arguments; \
         else \
-        { \
-            return_value = delegate_real_##name arguments; \
-        } \
-        trace_result(__func__, return_value); \
+            return_value = delegate_real_##api_name mock_arguments; \
+        trace_result(#api_name, caller_file, caller_line, caller_function, return_value); \
         return return_value; \
     }
 
-#define MOCK_LUA_VOID(return_type, name, parameters, arguments, matchers) \
-    return_type delegate_real_##name parameters \
+#define MOCK_LUA_VOID(return_type, original_name, api_name, parameters, arguments, mock_parameters, mock_arguments, matchers) \
+    return_type delegate_real_##api_name mock_parameters \
     { \
-        static auto real_fn = reinterpret_cast<decltype(&name)>(resolveSharedSymbolOrExit(kLibLuaName, #name)); \
+        (void)caller_file; \
+        (void)caller_line; \
+        (void)caller_function; \
+        static auto real_fn = reinterpret_cast<decltype(&api_name)>(resolveSharedSymbolOrExit(kLibLuaName, #api_name)); \
         real_fn arguments; \
     } \
-    MOCK_LUA_IMPL(return_type, name, MOCK_LUA_EXPAND parameters) \
+    MOCK_LUA_IMPL(return_type, api_name, MOCK_LUA_EXPAND parameters) \
+    { \
+        const char *caller_file = "<unknown>"; \
+        const int caller_line = 0; \
+        const char *caller_function = "<unknown>"; \
+        mock_##api_name mock_arguments; \
+    } \
+    extern "C" return_type mock_##api_name mock_parameters \
     { \
         if (_mock_lua != nullptr) \
-        { \
-            _mock_lua->name arguments; \
-        } \
+            _mock_lua->api_name mock_arguments; \
         else \
-        { \
-            delegate_real_##name arguments; \
-        } \
-        trace_void(__func__); \
+            delegate_real_##api_name mock_arguments; \
+        trace_void(#api_name, caller_file, caller_line, caller_function); \
     }
 
 #include <mock_lua_api_table.h>
@@ -104,17 +119,17 @@ void trace_void(const char *func)
 
 Mock_lua::Mock_lua()
 {
-#define MOCK_LUA_RET(return_type, name, parameters, arguments, matchers) \
-    ON_CALL(*this, name matchers).WillByDefault(Invoke(delegate_real_##name));
-#define MOCK_LUA_VOID(return_type, name, parameters, arguments, matchers) \
-    ON_CALL(*this, name matchers).WillByDefault(Invoke(delegate_real_##name));
+#define MOCK_LUA_RET(return_type, original_name, api_name, parameters, arguments, mock_parameters, mock_arguments, matchers) \
+    ON_CALL(*this, api_name matchers).WillByDefault(Invoke(delegate_real_##api_name));
+#define MOCK_LUA_VOID(return_type, original_name, api_name, parameters, arguments, mock_parameters, mock_arguments, matchers) \
+    ON_CALL(*this, api_name matchers).WillByDefault(Invoke(delegate_real_##api_name));
 #include <mock_lua_api_table.h>
 #undef MOCK_LUA_VOID
 #undef MOCK_LUA_RET
 
-    ON_CALL(*this, lua_pushfstring(_, _, _)).WillByDefault(Invoke(delegate_real_lua_pushfstring));
-    ON_CALL(*this, lua_gc(_, _, _)).WillByDefault(Invoke(delegate_real_lua_gc));
-    ON_CALL(*this, luaL_error(_, _, _)).WillByDefault(Invoke(delegate_real_luaL_error));
+    ON_CALL(*this, lua_app_lua_pushfstring(_, _, _, _, _, _)).WillByDefault(Invoke(delegate_real_lua_app_lua_pushfstring));
+    ON_CALL(*this, lua_app_lua_gc(_, _, _, _, _, _)).WillByDefault(Invoke(delegate_real_lua_app_lua_gc));
+    ON_CALL(*this, lua_app_luaL_error(_, _, _, _, _, _)).WillByDefault(Invoke(delegate_real_lua_app_luaL_error));
     TESTFW_REGISTER_MOCK_INSTANCE(_mock_lua);
 }
 

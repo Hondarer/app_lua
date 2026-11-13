@@ -4,6 +4,12 @@
 # 手動改変しない (再展開で上書きされる)。行編集オプション (LUA_USE_READLINE) は
 # 定義せず、readline への外部依存を避けた最小構成でビルドする。
 
+ifdef PLATFORM_WINDOWS
+    CFLAGS += /FI"$(MYAPP_DIR)/prod/include_internal/lua_app_namespace.h"
+else
+    CFLAGS += -include "$(MYAPP_DIR)/prod/include_internal/lua_app_namespace.h"
+endif
+
 # upstream の一次ソース自体に残る警告だけを、このリーフで抑制する。
 ifdef PLATFORM_LINUX
     CFLAGS   += -Wno-padded -Wno-cast-qual -Wno-switch-default -Wno-switch-enum -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion
