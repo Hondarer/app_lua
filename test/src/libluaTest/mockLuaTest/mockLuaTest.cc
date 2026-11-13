@@ -41,8 +41,9 @@ TEST(mockLuaTest, delegates_to_real_with_default_action)
 TEST(mockLuaTest, overrides_result)
 {
     // Arrange
-    NiceMock<Mock_lua> mock_lua;                               // [状態] - 既定動作の Mock_lua を生成する。
-    lua_State *expected = reinterpret_cast<lua_State *>(1);    // [状態] - モックの戻り値とするダミーの lua_State を用意する。
+    NiceMock<Mock_lua> mock_lua; // [状態] - 既定動作の Mock_lua を生成する。
+    lua_State *expected =
+        reinterpret_cast<lua_State *>(1); // [状態] - モックの戻り値とするダミーの lua_State を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_lua, luaL_newstate())
@@ -81,8 +82,8 @@ TEST(mockLuaTest, delegates_variadic_format_to_real)
 TEST(mockLuaTest, overrides_variadic_gc_result)
 {
     // Arrange
-    NiceMock<Mock_lua> mock_lua;                            // [状態] - 既定動作の Mock_lua を生成する。
-    lua_State *state = reinterpret_cast<lua_State *>(1);    // [状態] - モック呼び出し用のダミーの lua_State を用意する。
+    NiceMock<Mock_lua> mock_lua;                         // [状態] - 既定動作の Mock_lua を生成する。
+    lua_State *state = reinterpret_cast<lua_State *>(1); // [状態] - モック呼び出し用のダミーの lua_State を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_lua, lua_gc(state, LUA_GCCOUNT, _))
@@ -101,9 +102,9 @@ TEST(mockLuaTest, overrides_variadic_gc_result)
 TEST(mockLuaTest, isolates_calls_without_real_state)
 {
     // Arrange
-    NiceMock<Mock_lua> mock_lua;                            // [状態] - 既定動作の Mock_lua を生成する。
-    lua_State *state = reinterpret_cast<lua_State *>(1);    // [状態] - モック呼び出し用のダミーの lua_State を用意する。
-    const char *expected = "value";                          // [状態] - モックの戻り値とする文字列を用意する。
+    NiceMock<Mock_lua> mock_lua;                         // [状態] - 既定動作の Mock_lua を生成する。
+    lua_State *state = reinterpret_cast<lua_State *>(1); // [状態] - モック呼び出し用のダミーの lua_State を用意する。
+    const char *expected = "value";                      // [状態] - モックの戻り値とする文字列を用意する。
 
     // Pre-Assert
     EXPECT_CALL(mock_lua, luaL_newstate())
